@@ -127,20 +127,19 @@ class DAGERC(nn.Module):
         H = [H0]
         P = [s_feature]
         for l in range(config.layers):
-            Mp = torch.bmm(s_adj.permute(0,2,1), P[l])   # B*N*D, 每一行表示对应的speaker的特征向量
-            H1 = self.grus[l](H[l][:, 0, :]).unsqueeze(1)  # (B, 1, D)  # 使用GRU更新第一个utterance
-            for i in range(1, num_utter):  # 对于一个对话中的每一个utter
-                _, M = self.gather1[l](H[l][:, i, :], H1, H1, adj[:, i, :i], s_mask)  # 直接根据邻接矩阵以及隐状态进行聚合
+            Mp = torch.bmm(s_adj.permute(0,2,1), P[l])
+            H1 = self.grus[l](H[l][:, 0, :]).unsqueeze(1)
+            for i in range(1, num_utter):
+                _, M = self.gather1[l](H[l][:, i, :], H1, H1, adj[:, i, :i], s_mask)
                 Mpi = Mp[:, i, :]  # B,1,D
                 M = torch.cat([M, Mpi], dim=-1)
                 M = self.linears[l](M)
-                H1 = torch.cat((H1, self.grus[l](H[l][:, i, :], M).unsqueeze(1)), dim=1)  # 将求得的i的表示拼接到H1上 B,N,D
+                H1 = torch.cat((H1, self.grus[l](H[l][:, i, :], M).unsqueeze(1)), dim=1)
             H1 = self.dropout(H1)
             H.append(H1)
             # update P from utterance
-            # 获取当前M相邻的所有utterance的平均值作为当前P的聚合表示，然后与P^{l-1}一同执行GRU进行更新
-            P_l_1 = torch.bmm(s_adj, H1)   # B,M,D 聚合每一个P相邻的utterance作为潜在特征
-            Plm = []   # 用于存放每一个P的gru更新之后的特征
+            P_l_1 = torch.bmm(s_adj, H1)
+            Plm = []
             for m in range(P_l_1.shape[1]):
                 Plm.append(self.grus[l](P[l][:, m, :], P_l_1[:, m, :]).unsqueeze(1))
             Pl = torch.cat(Plm, dim=1)  # B,M,D
@@ -326,9 +325,8 @@ class PERC(nn.Module):
 
         P = [s_feature]
         for l in range(config.layers):
-            P_l_1 = torch.bmm(s_adj.permute(0, 2, 1), P[l])  # B*N*D, 每一行表示utterance对应的speaker的特征向量
-            Agg = self.gather[l](H[l], adj, s_mask)  # RGAT
-            # H_l_1, P_l_1, Agg进行gated聚合。H_l_1代表上layer的utterance表示；P_l_1代表上layer的Speaker表示
+            P_l_1 = torch.bmm(s_adj.permute(0, 2, 1), P[l])
+            Agg = self.gather[l](H[l], adj, s_mask)
             if config.att_agg:
                 H_l = self.agg[l](H[l], P_l_1, Agg)
             else:
@@ -337,7 +335,7 @@ class PERC(nn.Module):
             H_l = self.dropout(H_l)
             H.append(H_l)
             # update P_l from all utteracne and P_l_1
-            P_l = torch.bmm(s_adj, H[l])  # B,M,D 聚合每一个P相邻的utterance作为潜在特征
+            P_l = torch.bmm(s_adj, H[l])
             P_l = self.grus[l](P[l], P_l)
             P.append(P_l)
         p_sim = self.sim_loss(P[-1])

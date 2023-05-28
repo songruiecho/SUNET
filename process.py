@@ -28,8 +28,8 @@ def get_speaker_feas():
     with open('../data/roberta_feas/{}/train_data_roberta.json.feature'.format(config.dataset), 'r') as rf:
         train = json.load(rf)
     print(len(dev), len(test), len(train))
-    datas = dev + test + train
-    # datas = dev + train
+    # datas = dev + test + train
+    datas = train
     Speaker2fea = {}
     i = 0
     for conversation in tqdm(datas):

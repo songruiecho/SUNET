@@ -89,16 +89,15 @@ class MyDataset(Dataset):
         :return:
             adj: (B, N, N) adj[:,i,:] means the direct predecessors of node i
         '''
-        adj = []  # 定义2种关系，分别构建三个不同的adj。r1:某一个人所说过的话与其本身的联系； r2:会话上下文对他造成的联系; 而全局特征造成的影响使用一个门机制进行更新
-        # 同样，全局影响（P节点）使用类似于S-LSTM的方法进行更新，它用于不同speaker的utterance之间进行消息交换，并给出speaker的用户画像
+        adj = []
         for speaker in speakers:   # for each batch
-            a = torch.zeros(max_dialog_len, max_dialog_len)  # 分别存放两种异构边的矩阵
+            a = torch.zeros(max_dialog_len, max_dialog_len)
             for i in range(len(speaker)):
                 w1, w2 = config.w1, config.w2
                 j = i-1
-                while w1 > 0 and j >= 0:   # w1>0代表仍有窗口需要填充； j>=0代表还没有找到第一个speaker
+                while w1 > 0 and j >= 0:
                     a[i, j] = 1
-                    # a[j, i] = 1   # 对称
+                    # a[j, i] = 1
                     w1 = w1 - 1
                     j = j - 1
             adj.append(a)
@@ -129,13 +128,12 @@ class MyDataset(Dataset):
             s_mask_onehot.append(s_onehot)
         return torch.stack(s_mask), torch.stack(s_mask_onehot)
 
-    # 获取句子中每一个speaker的特征以及对应的mask
     def get_speaker_feas_masks(self, speakers, max_dialog_len):
         s_adj = []
         s_feature = []
         s_ids = []
-        for speaker in speakers:   # 对于每一个speaker计算与其有关系的utterance
-            a = torch.zeros(config.max_speaker_num, max_dialog_len)  # M*N 存放speaker以及utte之间的边
+        for speaker in speakers:
+            a = torch.zeros(config.max_speaker_num, max_dialog_len)  # M*N
             f = []    # feature for speaker matrix
             s_set = list(set(speaker))
             for i in s_set:
@@ -143,7 +141,7 @@ class MyDataset(Dataset):
                 if s_name in self.speaker2fea.keys():
                     f.append(self.speaker2fea[s_name])
                     # print(self.speaker2fea[s_name].shape)
-                else:   # 不存在的则随机生成作为特征表示
+                else:
                     f.append(np.random.randn(1024,))
             f.extend((config.max_speaker_num-len(f))*[np.zeros_like(f[0])])
             assert len(f) == config.max_speaker_num
